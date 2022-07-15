@@ -30,3 +30,7 @@ func (b Bool) String() string {
 type NilT struct{}
 
 var Nil = NilT{}
+
+func (NilT) String() string {
+	return "nil"
+}

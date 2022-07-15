@@ -7,21 +7,94 @@ import (
 	"strconv"
 )
 
-func (p *parser) Parse() (e ast.Expr, err error) {
+func (p *parser) Parse() (e ast.Stmt, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = e.(error)
 		}
 	}()
-	e = p.Expr()
+	e = p.Program()
 	if p.Eof() {
 		return e, nil
 	}
 	return nil, fmt.Errorf("unexpected token: %s %s", p.Peek().Lexeme, p.Peek().Start)
 }
 
+func (p *parser) Program() ast.Stmt {
+	sts := []ast.Stmt{}
+	for !p.Eof() {
+		s := p.Decl()
+		if s == nil {
+			break
+		}
+		sts = append(sts, s)
+	}
+	return ast.ProgStmt(sts...)
+}
+
+func (p *parser) Decl() ast.Stmt {
+	if p.Match(lex.TokKW, "var") {
+		return p.DeclStmt()
+	}
+	return p.Stmt()
+}
+
+func (p *parser) DeclStmt() ast.Stmt {
+	name := p.Consume("variable name expected", lex.TokId).Lexeme
+	var init ast.Expr = ast.Nil
+	if p.Match(lex.TokOp, "=") {
+		init = p.Expr()
+	}
+	p.Consume("expect ';' after declaration", lex.TokPunc, ";")
+	return ast.Decl(name, init)
+}
+
+func (p *parser) Stmt() ast.Stmt {
+	if p.Match(lex.TokKW, "print") {
+		return p.PrintStmt()
+	}
+	if p.Match(lex.TokPunc, "{") {
+		return p.Block()
+	}
+	return p.ExprStmt()
+}
+
+func (p *parser) Block() ast.Stmt {
+	sts := []ast.Stmt{}
+	for !p.Check(lex.TokPunc, "}") && !p.Eof() {
+		sts = append(sts, p.Decl())
+	}
+	p.Consume("block must close with '}'", lex.TokPunc, "}")
+	return ast.BlockStmt(sts...)
+}
+
+func (p *parser) PrintStmt() ast.Stmt {
+	e := p.Expr()
+	p.Consume("';' expected after value", lex.TokPunc, ";")
+	return ast.PrintStmt(e)
+}
+
+func (p *parser) ExprStmt() ast.Stmt {
+	e := p.Expr()
+	p.Consume("';' expected after value", lex.TokPunc, ";")
+	return ast.ExprStmt(e)
+}
+
 func (p *parser) Expr() ast.Expr {
-	return p.Equality()
+	return p.Assign()
+}
+
+func (p *parser) Assign() ast.Expr {
+	lhs := p.Equality()
+	if p.Match(lex.TokOp, "=") {
+		rhs := p.Assign()
+		switch lhs := lhs.(type) {
+		case ast.Var:
+			return ast.Assignment(lhs, rhs)
+		}
+		panic(p.Error("assignment must have variable on the LHS"))
+	}
+	return lhs
 }
 
 func (p *parser) Equality() ast.Expr {
@@ -91,10 +164,16 @@ func (p *parser) Primary() ast.Expr {
 		}
 		panic(p.Error("Can't parse numeric value %s: %s", n.Lexeme, err))
 	}
+	if p.Match(lex.TokKW, "nil") {
+		return ast.Nil
+	}
 	if p.Match(lex.TokPunc, "(") {
 		e := p.Expr()
-		p.Consume(lex.TokPunc, ")", "expect ')' after expression")
+		p.Consume("expect ')' after expression", lex.TokPunc, ")")
 		return e
+	}
+	if p.Match(lex.TokId) {
+		return ast.Id(p.Previous().Lexeme)
 	}
 	panic(p.Error("expected: Primary"))
 }

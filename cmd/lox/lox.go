@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"flag"
 	"fmt"
 	"github.com/jan-g/lox/eval"
 	"github.com/jan-g/lox/parse"
@@ -11,7 +12,19 @@ import (
 )
 
 func main() {
+	flag.Parse()
+
+	if len(flag.Args()) == 0 {
+		repl()
+	} else {
+		run(flag.Args()...)
+	}
+}
+
+func repl() {
 	r := bufio.NewReader(os.Stdin)
+	env := eval.New()
+
 	for {
 		l, err := r.ReadBytes('\n')
 		if err == io.EOF {
@@ -29,12 +42,40 @@ func main() {
 		if ast == nil {
 			break
 		}
-		fmt.Println(ast)
-		v, err := eval.Run(ast)
-		if err != nil {
+		_, _ = fmt.Fprintln(os.Stderr, ast)
+
+		if err := env.Run(ast); err != nil {
 			_, _ = fmt.Fprintln(os.Stderr, err.Error())
-		} else {
+		} /* else {
 			fmt.Println(v)
-		}
+		}*/
 	}
+}
+
+func run(in ...string) {
+	env := eval.New()
+	for _, fn := range in {
+		f, err := os.Open(fn)
+		if err != nil {
+			panic(err)
+		}
+		if err := run1(env, f); err != nil {
+			_, _ = fmt.Fprintln(os.Stderr, err.Error())
+		}
+		_ = f.Close()
+	}
+}
+
+func run1(env *eval.Env, in io.Reader) error {
+	p := parse.New(in)
+	ast, err := p.Parse()
+	if err != nil {
+		_, _ = fmt.Fprintln(os.Stderr, err.Error())
+		return err
+	}
+	if ast == nil {
+		return nil
+	}
+
+	return env.Run(ast)
 }

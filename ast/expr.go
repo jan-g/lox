@@ -21,7 +21,7 @@ func Str(s string) Expr {
 type NLit float64
 
 func (n NLit) String() string {
-	return fmt.Sprintf("%f", n)
+	return fmt.Sprintf("%g", n)
 }
 
 func Num(n float64) Expr {
@@ -59,5 +59,43 @@ func Un(op string, arg Expr) Expr {
 	return &UnOp{
 		Op:  op,
 		Arg: arg,
+	}
+}
+
+type NilT struct{}
+
+var Nil = NilT{}
+
+func (NilT) String() string {
+	return "nil"
+}
+
+type Var string
+
+func (v Var) String() string {
+	return string(v)
+}
+
+func (v Var) VarName() string {
+	return string(v)
+}
+
+func Id(name string) Expr {
+	return Var(name)
+}
+
+type Assign struct {
+	Lhs Var
+	Rhs Expr
+}
+
+func (a *Assign) String() string {
+	return fmt.Sprintf("(%s = %s)", a.Lhs, a.Rhs)
+}
+
+func Assignment(lhs Var, rhs Expr) Expr {
+	return &Assign{
+		Lhs: lhs,
+		Rhs: rhs,
 	}
 }

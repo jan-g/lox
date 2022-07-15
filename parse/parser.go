@@ -8,7 +8,7 @@ import (
 )
 
 type Parser interface {
-	Parse() (ast.Expr, error)
+	Parse() (ast.Stmt, error)
 	Expr() ast.Expr
 }
 
@@ -69,9 +69,11 @@ func (p *parser) Eof() bool {
 	return p.Check(lex.TokEof)
 }
 
-func (p *parser) Consume(t lex.TokenType, lexeme string, msg string) lex.T {
-	if p.Check(t, lexeme) {
-		return p.Advance()
+func (p *parser) Consume(msg string, t lex.TokenType, lexeme ...string) lex.T {
+	if p.Check(t, lexeme...) {
+		curr := p.Peek()
+		p.Next()
+		return curr
 	}
 	panic(p.Error(msg))
 }

@@ -6,7 +6,53 @@ import (
 	"github.com/jan-g/lox/value"
 )
 
-func Run(e ast.Expr) (_ value.Value, err error) {
+type Env struct {
+	Parent   *Env
+	Bindings map[string]value.Value
+}
+
+func (env *Env) Bind(name string, v value.Value) {
+	env.Bindings[name] = v
+}
+
+func (env *Env) Lookup(name string) value.Value {
+	for env != nil {
+		v, ok := env.Bindings[name]
+		if ok {
+			return v
+		}
+		env = env.Parent
+	}
+	panic(fmt.Errorf("unbound variable: %s", name))
+}
+
+func (env *Env) Assign(name string, v value.Value) {
+	for env != nil {
+		_, ok := env.Bindings[name]
+		if ok {
+			env.Bindings[name] = v
+			return
+		}
+		env = env.Parent
+	}
+	panic(fmt.Errorf("cannot update unbound variable: %s", name))
+}
+
+func New(parent ...*Env) *Env {
+	if len(parent) > 1 {
+		panic("can only call New with 0 or 1 items")
+	}
+	var p *Env
+	if len(parent) == 1 {
+		p = parent[0]
+	}
+	return &Env{
+		Parent:   p,
+		Bindings: make(map[string]value.Value),
+	}
+}
+
+func (env *Env) Run(e ast.Stmt) (err error) {
 	defer func() {
 		e := recover()
 		if e == nil {
@@ -14,35 +60,75 @@ func Run(e ast.Expr) (_ value.Value, err error) {
 		}
 		err = e.(error)
 	}()
-	return Eval(e), nil
+	return env.Exec(e)
 }
 
-func Eval(e ast.Expr) value.Value {
+func (env *Env) Exec(s ast.Stmt) error {
+	switch s := s.(type) {
+	case ast.Program:
+		for _, ss := range s {
+			if err := env.Exec(ss); err != nil {
+				return err
+			}
+		}
+		return nil
+	case *ast.Print:
+		e := env.Eval(s.Expr)
+		fmt.Println(e)
+		return nil
+	case *ast.Expression:
+		_ = env.Eval(s.Expr)
+		return nil
+	case *ast.VarDecl:
+		v := env.Eval(s.Expr)
+		env.Bind(s.VarName, v)
+		return nil
+	case ast.Block:
+		env2 := New(env)
+		for _, ss := range s {
+			if err := env2.Exec(ss); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	return fmt.Errorf("unknown statement type %s", s)
+}
+
+func (env *Env) Eval(e ast.Expr) value.Value {
 	switch e := e.(type) {
 	case ast.StrLit:
 		return value.Str(e)
 	case ast.NLit:
 		return value.Num(e)
 	case *ast.UnOp:
-		return UnOp(e)
+		return env.UnOp(e)
 	case *ast.BinOp:
-		return BinOp(e)
+		return env.BinOp(e)
+	case ast.NilT:
+		return value.Nil
+	case ast.Var:
+		return env.Lookup(e.VarName())
+	case *ast.Assign:
+		rhs := env.Eval(e.Rhs)
+		env.Assign(string(e.Lhs), rhs)
+		return rhs
 	}
 	panic(fmt.Errorf("unhandled expr %s", e))
 }
 
-func UnOp(e *ast.UnOp) value.Value {
+func (env *Env) UnOp(e *ast.UnOp) value.Value {
 	switch e.Op {
 	case "-":
-		n := Eval(e.Arg).(value.Num)
+		n := env.Eval(e.Arg).(value.Num)
 		return -n
 	}
 	panic(fmt.Errorf("unhandled unary op %s", e))
 }
 
-func BinOp(e *ast.BinOp) value.Value {
-	l := Eval(e.Left)
-	r := Eval(e.Right)
+func (env *Env) BinOp(e *ast.BinOp) value.Value {
+	l := env.Eval(e.Left)
+	r := env.Eval(e.Right)
 	switch e.Op {
 	case "+":
 		{
