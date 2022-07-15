@@ -70,6 +70,19 @@ func (NilT) String() string {
 	return "nil"
 }
 
+type Bool bool
+
+func (b Bool) String() string {
+	if b {
+		return "true"
+	} else {
+		return "false"
+	}
+}
+
+var True = Bool(true)
+var False = Bool(false)
+
 type Var string
 
 func (v Var) String() string {
@@ -97,5 +110,23 @@ func Assignment(lhs Var, rhs Expr) Expr {
 	return &Assign{
 		Lhs: lhs,
 		Rhs: rhs,
+	}
+}
+
+type LogOp struct {
+	First  Expr
+	Op     string
+	Second Expr
+}
+
+func (b LogOp) String() string {
+	return fmt.Sprintf("(%s %s %s)", b.First, b.Op, b.Second)
+}
+
+func Log(a Expr, op string, b Expr) Expr {
+	return &LogOp{
+		First:  a,
+		Op:     op,
+		Second: b,
 	}
 }

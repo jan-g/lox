@@ -50,6 +50,15 @@ func (p *parser) DeclStmt() ast.Stmt {
 }
 
 func (p *parser) Stmt() ast.Stmt {
+	if p.Match(lex.TokKW, "if") {
+		return p.IfStmt()
+	}
+	if p.Match(lex.TokKW, "while") {
+		return p.WhileStmt()
+	}
+	if p.Match(lex.TokKW, "for") {
+		return p.ForStmt()
+	}
 	if p.Match(lex.TokKW, "print") {
 		return p.PrintStmt()
 	}
@@ -57,6 +66,67 @@ func (p *parser) Stmt() ast.Stmt {
 		return p.Block()
 	}
 	return p.ExprStmt()
+}
+
+func (p *parser) IfStmt() ast.Stmt {
+	p.Consume("if condition must be preceded by '('", lex.TokPunc, "(")
+	cond := p.Expr()
+	p.Consume("if condition must be followed by ')'", lex.TokPunc, ")")
+	th := p.Stmt()
+	var el ast.Stmt
+	if p.Match(lex.TokKW, "else") {
+		el = p.Stmt()
+	}
+	return ast.IfStmt(cond, th, el)
+}
+
+func (p *parser) WhileStmt() ast.Stmt {
+	p.Consume("while condition must be preceded by '('", lex.TokPunc, "(")
+	cond := p.Expr()
+	p.Consume("while condition must be followed by ')'", lex.TokPunc, ")")
+	body := p.Stmt()
+	return ast.WhileStmt(cond, body)
+}
+
+func (p *parser) ForStmt() ast.Stmt {
+	p.Consume("for condition must be followed by '('", lex.TokPunc, "(")
+
+	var init ast.Stmt
+	if p.Match(lex.TokPunc, ";") {
+		// Nothing to do
+	} else if p.Match(lex.TokKW, "var") {
+		init = p.DeclStmt()
+	} else {
+		init = p.ExprStmt()
+	}
+	var cond ast.Expr
+	if p.Check(lex.TokPunc, ";") {
+		// Nothing to do
+	} else {
+		cond = p.Expr()
+	}
+	p.Consume("for condition must be followed by ';'", lex.TokPunc, ";")
+	var incr ast.Expr
+	if p.Check(lex.TokPunc, ")") {
+		// Nothing to do
+	} else {
+		incr = p.Expr()
+	}
+	p.Consume("for increment must be followed by ')'", lex.TokPunc, ")")
+	body := p.Stmt()
+
+	// Desugar
+	if incr != nil {
+		body = ast.ProgStmt(body, ast.ExprStmt(incr))
+	}
+	if cond == nil {
+		cond = ast.True
+	}
+	body = ast.WhileStmt(cond, body)
+	if init != nil {
+		body = ast.BlockStmt(init, body)
+	}
+	return body
 }
 
 func (p *parser) Block() ast.Stmt {
@@ -85,7 +155,7 @@ func (p *parser) Expr() ast.Expr {
 }
 
 func (p *parser) Assign() ast.Expr {
-	lhs := p.Equality()
+	lhs := p.LogOr()
 	if p.Match(lex.TokOp, "=") {
 		rhs := p.Assign()
 		switch lhs := lhs.(type) {
@@ -95,6 +165,24 @@ func (p *parser) Assign() ast.Expr {
 		panic(p.Error("assignment must have variable on the LHS"))
 	}
 	return lhs
+}
+
+func (p *parser) LogOr() ast.Expr {
+	cond := p.LogAnd()
+	for p.Match(lex.TokKW, "or") {
+		c2 := p.LogOr()
+		cond = ast.Log(cond, "or", c2)
+	}
+	return cond
+}
+
+func (p *parser) LogAnd() ast.Expr {
+	cond := p.Equality()
+	for p.Match(lex.TokKW, "and") {
+		c2 := p.LogAnd()
+		cond = ast.Log(cond, "and", c2)
+	}
+	return cond
 }
 
 func (p *parser) Equality() ast.Expr {
@@ -166,6 +254,12 @@ func (p *parser) Primary() ast.Expr {
 	}
 	if p.Match(lex.TokKW, "nil") {
 		return ast.Nil
+	}
+	if p.Match(lex.TokKW, "true") {
+		return ast.True
+	}
+	if p.Match(lex.TokKW, "false") {
+		return ast.False
 	}
 	if p.Match(lex.TokPunc, "(") {
 		e := p.Expr()

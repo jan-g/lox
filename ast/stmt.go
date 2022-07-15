@@ -78,3 +78,47 @@ func (b Block) String() string {
 func BlockStmt(sts ...Stmt) Stmt {
 	return Block(sts)
 }
+
+type If struct {
+	Cond Expr
+	Then Stmt
+	Else Stmt
+}
+
+func (i *If) String() string {
+	buf := strings.Builder{}
+	buf.WriteString(fmt.Sprintf("if (%s)\n\t", i.Cond))
+	buf.WriteString(i.Then.String())
+	if i.Else != nil {
+		buf.WriteString("else\n\t")
+		buf.WriteString(i.Else.String())
+	}
+	return buf.String()
+}
+
+func IfStmt(cond Expr, then Stmt, otherwise Stmt) Stmt {
+	return &If{
+		Cond: cond,
+		Then: then,
+		Else: otherwise,
+	}
+}
+
+type While struct {
+	Cond Expr
+	Body Stmt
+}
+
+func (w *While) String() string {
+	buf := strings.Builder{}
+	buf.WriteString(fmt.Sprintf("while (%s)\n\t", w.Cond))
+	buf.WriteString(w.Body.String())
+	return buf.String()
+}
+
+func WhileStmt(cond Expr, body Stmt) Stmt {
+	return &While{
+		Cond: cond,
+		Body: body,
+	}
+}

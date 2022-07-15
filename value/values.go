@@ -34,3 +34,10 @@ var Nil = NilT{}
 func (NilT) String() string {
 	return "nil"
 }
+
+func Truthful(v Value) bool {
+	if v == Nil || v == Bool(false) {
+		return false
+	}
+	return true
+}

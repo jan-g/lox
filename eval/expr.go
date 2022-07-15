@@ -91,6 +91,23 @@ func (env *Env) Exec(s ast.Stmt) error {
 			}
 		}
 		return nil
+	case *ast.If:
+		cond := env.Eval(s.Cond)
+		if value.Truthful(cond) {
+			return env.Exec(s.Then)
+		} else if s.Else != nil {
+			return env.Exec(s.Else)
+		}
+	case *ast.While:
+		for {
+			cond := env.Eval(s.Cond)
+			if !value.Truthful(cond) {
+				return nil
+			}
+			if err := env.Exec(s.Body); err != nil {
+				return err
+			}
+		}
 	}
 	return fmt.Errorf("unknown statement type %s", s)
 }
@@ -105,8 +122,12 @@ func (env *Env) Eval(e ast.Expr) value.Value {
 		return env.UnOp(e)
 	case *ast.BinOp:
 		return env.BinOp(e)
+	case *ast.LogOp:
+		return env.LogOp(e)
 	case ast.NilT:
 		return value.Nil
+	case ast.Bool:
+		return value.Bool(e)
 	case ast.Var:
 		return env.Lookup(e.VarName())
 	case *ast.Assign:
@@ -122,6 +143,8 @@ func (env *Env) UnOp(e *ast.UnOp) value.Value {
 	case "-":
 		n := env.Eval(e.Arg).(value.Num)
 		return -n
+	case "!":
+		return value.Bool(!value.Truthful(env.Eval(e.Arg)))
 	}
 	panic(fmt.Errorf("unhandled unary op %s", e))
 }
@@ -163,6 +186,23 @@ func (env *Env) BinOp(e *ast.BinOp) value.Value {
 		return value.Bool(l == r)
 	case "!=":
 		return value.Bool(l != r)
+	}
+	panic(fmt.Errorf("unhandled binary op %s", e))
+}
+
+func (env *Env) LogOp(e *ast.LogOp) value.Value {
+	a := env.Eval(e.First)
+	switch e.Op {
+	case "or":
+		if value.Truthful(a) {
+			return a
+		}
+		return env.Eval(e.Second)
+	case "and":
+		if !value.Truthful(a) {
+			return a
+		}
+		return env.Eval(e.Second)
 	}
 	panic(fmt.Errorf("unhandled binary op %s", e))
 }
