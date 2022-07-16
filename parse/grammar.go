@@ -237,7 +237,34 @@ func (p *parser) Unary() ast.Expr {
 		return ast.Un(op.Lexeme, p.Unary())
 	}
 
-	return p.Primary()
+	return p.Call()
+}
+
+func (p *parser) Call() ast.Expr {
+	c := p.Primary()
+	for p.Match(lex.TokPunc, "(") {
+		if p.Match(lex.TokPunc, ")") {
+			// Nothing to do
+			c = ast.CallExpr(c)
+		} else {
+			c = ast.CallExpr(c, p.Arguments()...)
+		}
+	}
+	return c
+}
+
+func (p *parser) Arguments() []ast.Expr {
+	var as []ast.Expr
+	for {
+		a := p.Expr()
+		as = append(as, a)
+		if p.Match(lex.TokPunc, ")") {
+			return as
+		}
+		if !p.Match(lex.TokPunc, ",") {
+			panic(p.Error("unclosed argument list"))
+		}
+	}
 }
 
 func (p *parser) Primary() ast.Expr {

@@ -1,6 +1,9 @@
 package value
 
-import "strconv"
+import (
+	"github.com/jan-g/lox/ast"
+	"strconv"
+)
 
 type Value interface {
 	String() string
@@ -40,4 +43,18 @@ func Truthful(v Value) bool {
 		return false
 	}
 	return true
+}
+
+type Env interface {
+	Bind(name string, v Value)
+	Lookup(name string) Value
+	Assign(name string, v Value)
+
+	Run(stmt ast.Stmt) error
+}
+
+type Callable interface {
+	Value
+	Arity() int
+	Call(e Env, ps ...Value) Value
 }

@@ -134,6 +134,20 @@ func (env *Env) Eval(e ast.Expr) value.Value {
 		rhs := env.Eval(e.Rhs)
 		env.Assign(string(e.Lhs), rhs)
 		return rhs
+	case *ast.Call:
+		t := env.Eval(e.Callee)
+		target, ok := env.Eval(e.Callee).(value.Callable)
+		if !ok {
+			panic(fmt.Errorf("target %s is not callable", t))
+		}
+		if target.Arity() != len(e.Args) {
+			panic(fmt.Errorf("%s required %d args, %d given", target, target.Arity(), len(e.Args)))
+		}
+		ps := make([]value.Value, len(e.Args))
+		for i, a := range e.Args {
+			ps[i] = env.Eval(a)
+		}
+		return target.Call(env, ps...)
 	}
 	panic(fmt.Errorf("unhandled expr %s", e))
 }

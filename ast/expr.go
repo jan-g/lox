@@ -2,6 +2,7 @@ package ast
 
 import (
 	"fmt"
+	"strings"
 )
 
 type Expr interface {
@@ -128,5 +129,31 @@ func Log(a Expr, op string, b Expr) Expr {
 		First:  a,
 		Op:     op,
 		Second: b,
+	}
+}
+
+type Call struct {
+	Callee Expr
+	Args   []Expr
+}
+
+func (c *Call) String() string {
+	buf := strings.Builder{}
+	buf.WriteString(c.Callee.String())
+	buf.WriteRune('(')
+	for i, a := range c.Args {
+		if i > 0 {
+			buf.WriteString(", ")
+		}
+		buf.WriteString(a.String())
+	}
+	buf.WriteRune(')')
+	return buf.String()
+}
+
+func CallExpr(c Expr, as ...Expr) Expr {
+	return &Call{
+		Callee: c,
+		Args:   as,
 	}
 }

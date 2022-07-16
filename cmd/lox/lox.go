@@ -5,8 +5,10 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
+	"github.com/jan-g/lox/builtin"
 	"github.com/jan-g/lox/eval"
 	"github.com/jan-g/lox/parse"
+	"github.com/jan-g/lox/value"
 	"io"
 	"os"
 )
@@ -23,7 +25,7 @@ func main() {
 
 func repl() {
 	r := bufio.NewReader(os.Stdin)
-	env := eval.New()
+	env := builtin.InitEnv(eval.New())
 
 	for {
 		l, err := r.ReadBytes('\n')
@@ -53,7 +55,7 @@ func repl() {
 }
 
 func run(in ...string) {
-	env := eval.New()
+	env := builtin.InitEnv(eval.New())
 	for _, fn := range in {
 		f, err := os.Open(fn)
 		if err != nil {
@@ -66,7 +68,7 @@ func run(in ...string) {
 	}
 }
 
-func run1(env *eval.Env, in io.Reader) error {
+func run1(env value.Env, in io.Reader) error {
 	p := parse.New(in)
 	ast, err := p.Parse()
 	if err != nil {
