@@ -122,3 +122,50 @@ func WhileStmt(cond Expr, body Stmt) Stmt {
 		Body: body,
 	}
 }
+
+type FunDef struct {
+	Name   string
+	Params []string
+	Body   Stmt
+}
+
+func (f *FunDef) String() string {
+	buf := strings.Builder{}
+	buf.WriteString("fun ")
+	buf.WriteString(f.Name)
+	buf.WriteString("(")
+	for i, p := range f.Params {
+		if i > 0 {
+			buf.WriteString(", ")
+		}
+		buf.WriteString(p)
+	}
+	buf.WriteString(") ")
+	buf.WriteString(f.Body.String())
+	return buf.String()
+}
+
+func FunStmt(name string, params []string, body Stmt) Stmt {
+	return &FunDef{
+		Name:   name,
+		Params: params,
+		Body:   body,
+	}
+}
+
+type Return struct {
+	Expr
+}
+
+func (r *Return) String() string {
+	if r.Expr == nil {
+		return "return;"
+	}
+	return fmt.Sprintf("return %s;", r.Expr)
+}
+
+func ReturnStmt(e Expr) Stmt {
+	return &Return{
+		Expr: e,
+	}
+}

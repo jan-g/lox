@@ -1,0 +1,23 @@
+fun counter() {
+  var i = 0;
+  fun count() {
+    i = i + 1;
+    return i;
+  }
+  return count;
+}
+
+var c1 = counter();
+var c2 = counter();
+
+for (var i = 0; i < 10; i = i + 1) {
+  c1();
+  c2();
+  c1();
+}
+
+print "counter 1:";
+print c1();
+
+print "counter 2:";
+print c2();

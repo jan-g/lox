@@ -11,6 +11,12 @@ type Env struct {
 	Bindings map[string]value.Value
 }
 
+var _ value.Env = &Env{}
+
+func (e *Env) Child() value.Env {
+	return New(e)
+}
+
 func (env *Env) Bind(name string, v value.Value) {
 	env.Bindings[name] = v
 }
@@ -83,6 +89,9 @@ func (env *Env) Exec(s ast.Stmt) error {
 		v := env.Eval(s.Expr)
 		env.Bind(s.VarName, v)
 		return nil
+	case *ast.FunDef:
+		env.Bind(s.Name, value.MakeClosure(env, s.Params, s.Body))
+		return nil
 	case ast.Block:
 		env2 := New(env)
 		for _, ss := range s {
@@ -108,6 +117,12 @@ func (env *Env) Exec(s ast.Stmt) error {
 				return err
 			}
 		}
+	case *ast.Return:
+		var v value.Value = value.Nil
+		if s.Expr != nil {
+			v = env.Eval(s.Expr)
+		}
+		panic(value.WrappedReturn{Value: v})
 	}
 	return fmt.Errorf("unknown statement type %s", s)
 }
@@ -148,6 +163,8 @@ func (env *Env) Eval(e ast.Expr) value.Value {
 			ps[i] = env.Eval(a)
 		}
 		return target.Call(env, ps...)
+	case *ast.FunDef:
+
 	}
 	panic(fmt.Errorf("unhandled expr %s", e))
 }

@@ -36,6 +36,9 @@ func (p *parser) Decl() ast.Stmt {
 	if p.Match(lex.TokKW, "var") {
 		return p.DeclStmt()
 	}
+	if p.Match(lex.TokKW, "fun") {
+		return p.FunDef()
+	}
 	return p.Stmt()
 }
 
@@ -47,6 +50,25 @@ func (p *parser) DeclStmt() ast.Stmt {
 	}
 	p.Consume("expect ';' after declaration", lex.TokPunc, ";")
 	return ast.Decl(name, init)
+}
+
+func (p *parser) FunDef() ast.Stmt {
+	name := p.Consume("function requires a name", lex.TokId)
+	p.Consume("function definition expects '('", lex.TokPunc, "(")
+	var params []string
+	if !p.Check(lex.TokPunc, ")") {
+		for {
+			formal := p.Consume("formal parameter must be an identifier", lex.TokId)
+			params = append(params, formal.Lexeme)
+			if !p.Match(lex.TokPunc, ",") {
+				break
+			}
+		}
+	}
+	p.Consume("formal parameters must end with ')'", lex.TokPunc, ")")
+	p.Consume("function body must be a block", lex.TokPunc, "{")
+	body := p.Block()
+	return ast.FunStmt(name.Lexeme, params, body)
 }
 
 func (p *parser) Stmt() ast.Stmt {
@@ -61,6 +83,9 @@ func (p *parser) Stmt() ast.Stmt {
 	}
 	if p.Match(lex.TokKW, "print") {
 		return p.PrintStmt()
+	}
+	if p.Match(lex.TokKW, "return") {
+		return p.ReturnStmt()
 	}
 	if p.Match(lex.TokPunc, "{") {
 		return p.Block()
@@ -148,6 +173,15 @@ func (p *parser) ExprStmt() ast.Stmt {
 	e := p.Expr()
 	p.Consume("';' expected after value", lex.TokPunc, ";")
 	return ast.ExprStmt(e)
+}
+
+func (p *parser) ReturnStmt() ast.Stmt {
+	if p.Match(lex.TokPunc, ";") {
+		return ast.ReturnStmt(nil)
+	}
+	e := p.Expr()
+	p.Consume("return requires ';'", lex.TokPunc, ";")
+	return ast.ReturnStmt(e)
 }
 
 func (p *parser) Expr() ast.Expr {
