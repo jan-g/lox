@@ -21,26 +21,31 @@ func (env *Env) Bind(name string, v value.Value) {
 	env.Bindings[name] = v
 }
 
-func (env *Env) Lookup(name string) value.Value {
-	for env != nil {
-		v, ok := env.Bindings[name]
-		if ok {
-			return v
-		}
+func (env *Env) Lookup(depth int, name string) value.Value {
+	for depth > 0 {
 		env = env.Parent
+		depth--
+	}
+
+	v, ok := env.Bindings[name]
+	if ok {
+		return v
 	}
 	panic(fmt.Errorf("unbound variable: %s", name))
 }
 
-func (env *Env) Assign(name string, v value.Value) {
-	for env != nil {
-		_, ok := env.Bindings[name]
-		if ok {
-			env.Bindings[name] = v
-			return
-		}
+func (env *Env) Assign(depth int, name string, v value.Value) {
+	for depth > 0 {
 		env = env.Parent
+		depth--
 	}
+
+	_, ok := env.Bindings[name]
+	if ok {
+		env.Bindings[name] = v
+		return
+	}
+
 	panic(fmt.Errorf("cannot update unbound variable: %s", name))
 }
 
@@ -90,7 +95,7 @@ func (env *Env) Exec(s ast.Stmt) error {
 		env.Bind(s.VarName, v)
 		return nil
 	case *ast.FunDef:
-		env.Bind(s.Name, value.MakeClosure(env, s.Params, s.Body))
+		env.Bind(s.Name.VarName(), value.MakeClosure(env, s.Params, s.Body))
 		return nil
 	case ast.Block:
 		env2 := New(env)
@@ -144,10 +149,10 @@ func (env *Env) Eval(e ast.Expr) value.Value {
 	case ast.Bool:
 		return value.Bool(e)
 	case ast.Var:
-		return env.Lookup(e.VarName())
+		return env.Lookup(e.Depth, e.VarName())
 	case *ast.Assign:
 		rhs := env.Eval(e.Rhs)
-		env.Assign(string(e.Lhs), rhs)
+		env.Assign(e.Lhs.Depth, e.Lhs.VarName(), rhs)
 		return rhs
 	case *ast.Call:
 		t := env.Eval(e.Callee)
@@ -163,8 +168,6 @@ func (env *Env) Eval(e ast.Expr) value.Value {
 			ps[i] = env.Eval(a)
 		}
 		return target.Call(env, ps...)
-	case *ast.FunDef:
-
 	}
 	panic(fmt.Errorf("unhandled expr %s", e))
 }

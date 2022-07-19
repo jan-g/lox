@@ -84,23 +84,31 @@ func (b Bool) String() string {
 var True = Bool(true)
 var False = Bool(false)
 
-type Var string
-
-func (v Var) String() string {
-	return string(v)
+type _Var struct {
+	Name  string
+	Depth int
 }
 
-func (v Var) VarName() string {
-	return string(v)
+func (v *_Var) String() string {
+	return fmt.Sprintf("%s@%d", v.Name, v.Depth)
 }
 
-func Id(name string) Expr {
-	return Var(name)
+func (v *_Var) VarName() string {
+	return v.Name
 }
+
+func Id(name string) *_Var {
+	return &_Var{
+		Name: name,
+	}
+}
+
+type Var = *_Var
 
 type Assign struct {
-	Lhs Var
-	Rhs Expr
+	Lhs   Var
+	Rhs   Expr
+	Depth int // For closures
 }
 
 func (a *Assign) String() string {

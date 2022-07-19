@@ -53,13 +53,14 @@ func (p *parser) DeclStmt() ast.Stmt {
 }
 
 func (p *parser) FunDef() ast.Stmt {
-	name := p.Consume("function requires a name", lex.TokId)
+	name := p.Consume("function requires a name", lex.TokId).Lexeme
+	fName := ast.Id(name)
 	p.Consume("function definition expects '('", lex.TokPunc, "(")
-	var params []string
+	var params []ast.Var
 	if !p.Check(lex.TokPunc, ")") {
 		for {
 			formal := p.Consume("formal parameter must be an identifier", lex.TokId)
-			params = append(params, formal.Lexeme)
+			params = append(params, ast.Id(formal.Lexeme))
 			if !p.Match(lex.TokPunc, ",") {
 				break
 			}
@@ -68,7 +69,7 @@ func (p *parser) FunDef() ast.Stmt {
 	p.Consume("formal parameters must end with ')'", lex.TokPunc, ")")
 	p.Consume("function body must be a block", lex.TokPunc, "{")
 	body := p.Block()
-	return ast.FunStmt(name.Lexeme, params, body)
+	return ast.FunStmt(fName, params, body)
 }
 
 func (p *parser) Stmt() ast.Stmt {
@@ -142,7 +143,7 @@ func (p *parser) ForStmt() ast.Stmt {
 
 	// Desugar
 	if incr != nil {
-		body = ast.ProgStmt(body, ast.ExprStmt(incr))
+		body = ast.BlockStmt(body, ast.ExprStmt(incr))
 	}
 	if cond == nil {
 		cond = ast.True

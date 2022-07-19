@@ -5,12 +5,17 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
+	"github.com/jan-g/lox/analysis"
 	"github.com/jan-g/lox/builtin"
 	"github.com/jan-g/lox/eval"
 	"github.com/jan-g/lox/parse"
 	"github.com/jan-g/lox/value"
 	"io"
 	"os"
+)
+
+var (
+	listAst = flag.Bool("list", false, "show syntax")
 )
 
 func main() {
@@ -35,18 +40,7 @@ func repl() {
 		if err != nil {
 			panic(err)
 		}
-		p := parse.New(bytes.NewReader(l[:len(l)-1]))
-		ast, err := p.Parse()
-		if err != nil {
-			_, _ = fmt.Fprintln(os.Stderr, err.Error())
-			continue
-		}
-		if ast == nil {
-			break
-		}
-		_, _ = fmt.Fprintln(os.Stderr, ast)
-
-		if err := env.Run(ast); err != nil {
+		if err := run1(env, bytes.NewReader(l[:len(l)-1]), true); err != nil {
 			_, _ = fmt.Fprintln(os.Stderr, err.Error())
 		} /* else {
 			fmt.Println(v)
@@ -61,14 +55,14 @@ func run(in ...string) {
 		if err != nil {
 			panic(err)
 		}
-		if err := run1(env, f); err != nil {
+		if err := run1(env, f, false); err != nil {
 			_, _ = fmt.Fprintln(os.Stderr, err.Error())
 		}
 		_ = f.Close()
 	}
 }
 
-func run1(env value.Env, in io.Reader) error {
+func run1(env value.Env, in io.Reader, printAst bool) error {
 	p := parse.New(in)
 	ast, err := p.Parse()
 	if err != nil {
@@ -77,6 +71,15 @@ func run1(env value.Env, in io.Reader) error {
 	}
 	if ast == nil {
 		return nil
+	}
+	if err := analysis.Analyse(ast); err != nil {
+		return err
+	}
+	if printAst || *listAst {
+		_, _ = fmt.Fprintf(os.Stderr, "%s\n", ast)
+		if *listAst {
+			return nil
+		}
 	}
 
 	return env.Run(ast)

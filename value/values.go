@@ -50,8 +50,8 @@ type Env interface {
 	Child() Env
 
 	Bind(name string, v Value)
-	Lookup(name string) Value
-	Assign(name string, v Value)
+	Lookup(depth int, name string) Value
+	Assign(depth int, name string, v Value)
 
 	Run(stmt ast.Stmt) error
 }
@@ -64,7 +64,7 @@ type Callable interface {
 
 type Closure struct {
 	ParentEnv Env
-	Formals   []string
+	Formals   []ast.Var
 	Body      ast.Stmt
 }
 
@@ -87,7 +87,7 @@ func (WrappedReturn) Error() string {
 func (c *Closure) Call(e Env, ps ...Value) Value {
 	e2 := c.ParentEnv.Child()
 	for i, f := range c.Formals {
-		e2.Bind(f, ps[i])
+		e2.Bind(f.VarName(), ps[i])
 	}
 	err := e2.Run(c.Body)
 	if v, ok := err.(WrappedReturn); ok {
@@ -100,7 +100,7 @@ func (c *Closure) Call(e Env, ps ...Value) Value {
 
 var _ Callable = &Closure{}
 
-func MakeClosure(parentEnv Env, formals []string, body ast.Stmt) Value {
+func MakeClosure(parentEnv Env, formals []ast.Var, body ast.Stmt) Value {
 	return &Closure{
 		ParentEnv: parentEnv,
 		Formals:   formals,
