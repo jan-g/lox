@@ -165,3 +165,37 @@ func CallExpr(c Expr, as ...Expr) Expr {
 		Args:   as,
 	}
 }
+
+type Get struct {
+	Object    Expr
+	Attribute string
+}
+
+func (g *Get) String() string {
+	return fmt.Sprintf("%s.%s", g.Object, g.Attribute)
+}
+
+func GetAttr(obj Expr, attr string) Expr {
+	return &Get{
+		Object:    obj,
+		Attribute: attr,
+	}
+}
+
+type Set struct {
+	Object    Expr
+	Attribute string
+	Rhs       Expr
+}
+
+func (s *Set) String() string {
+	return fmt.Sprintf("%s.%s = %s", s.Object, s.Attribute, s.Rhs)
+}
+
+func SetAttr(obj Expr, attr string, expr Expr) Expr {
+	return &Set{
+		Object:    obj,
+		Attribute: attr,
+		Rhs:       expr,
+	}
+}

@@ -97,6 +97,9 @@ func (env *Env) Exec(s ast.Stmt) error {
 	case *ast.FunDef:
 		env.Bind(s.Name.VarName(), value.MakeClosure(env, s.Params, s.Body))
 		return nil
+	case ast.ClassDef:
+		env.Bind(s.Name.VarName(), value.MakeClass(env, s.Name.VarName(), s.Methods...))
+		return nil
 	case ast.Block:
 		env2 := New(env)
 		for _, ss := range s {
@@ -156,7 +159,7 @@ func (env *Env) Eval(e ast.Expr) value.Value {
 		return rhs
 	case *ast.Call:
 		t := env.Eval(e.Callee)
-		target, ok := env.Eval(e.Callee).(value.Callable)
+		target, ok := t.(value.Callable)
 		if !ok {
 			panic(fmt.Errorf("target %s is not callable", t))
 		}
@@ -168,6 +171,29 @@ func (env *Env) Eval(e ast.Expr) value.Value {
 			ps[i] = env.Eval(a)
 		}
 		return env.call(target, ps...)
+
+	case *ast.Get:
+		t := env.Eval(e.Object)
+		target, ok := t.(value.Instance)
+		if !ok {
+			panic(fmt.Errorf("target %s has no attributes", t))
+		}
+		if v, ok := target.Fields[e.Attribute]; ok {
+			return v
+		} else {
+			panic(fmt.Errorf("Undefined property '%s' on %s", e.Attribute, t))
+		}
+
+	case *ast.Set:
+		t := env.Eval(e.Object)
+		target, ok := t.(value.Instance)
+		if !ok {
+			panic(fmt.Errorf("target %s has no attributes", t))
+		}
+		v := env.Eval(e.Rhs)
+		target.Fields[e.Attribute] = v
+		return v
+
 	}
 	panic(fmt.Errorf("unhandled expr %s", e))
 }

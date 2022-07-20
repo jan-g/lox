@@ -143,6 +143,13 @@ func visitExpr(e *env, x ast.Expr) error {
 			}
 		}
 		return nil
+	case *ast.Get:
+		return visitExpr(e, x.Object)
+	case *ast.Set:
+		if err := visitExpr(e, x.Object); err != nil {
+			return err
+		}
+		return visitExpr(e, x.Rhs)
 
 	default:
 		return fmt.Errorf("don't know how to visit expr %s", x)

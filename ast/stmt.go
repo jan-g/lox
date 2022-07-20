@@ -173,3 +173,32 @@ func ReturnStmt(e Expr) Stmt {
 		Expr: e,
 	}
 }
+
+type _ClassDef struct {
+	Name    Var
+	Methods []*FunDef
+}
+
+type ClassDef = *_ClassDef
+
+func (c *_ClassDef) String() string {
+	buf := strings.Builder{}
+	buf.WriteString("class ")
+	buf.WriteString(c.Name.String())
+	buf.WriteString(" {\n")
+	for i, p := range c.Methods {
+		if i > 0 {
+			buf.WriteString("\n")
+		}
+		buf.WriteString(p._String(""))
+	}
+	buf.WriteString("}\n")
+	return buf.String()
+}
+
+func ClassStmt(name Var, methods ...*FunDef) Stmt {
+	return &_ClassDef{
+		Name:    name,
+		Methods: methods,
+	}
+}

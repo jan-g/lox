@@ -39,6 +39,9 @@ func (p *parser) Decl() ast.Stmt {
 	if p.Match(lex.TokKW, "fun") {
 		return p.FunDef()
 	}
+	if p.Match(lex.TokKW, "class") {
+		return p.ClassDef()
+	}
 	return p.Stmt()
 }
 
@@ -70,6 +73,18 @@ func (p *parser) FunDef() ast.Stmt {
 	p.Consume("function body must be a block", lex.TokPunc, "{")
 	body := p.Block()
 	return ast.FunStmt(fName, params, body)
+}
+
+func (p *parser) ClassDef() ast.Stmt {
+	name := p.Consume("expect class name", lex.TokId).Lexeme
+	p.Consume("class def required '{'", lex.TokPunc, "{")
+	var methods []*ast.FunDef
+	for !p.Check(lex.TokPunc, "}") && !p.Eof() {
+		m := p.FunDef().(*ast.FunDef)
+		methods = append(methods, m)
+	}
+	p.Consume("class def required '}'", lex.TokPunc, "}")
+	return ast.ClassStmt(ast.Id(name), methods...)
 }
 
 func (p *parser) Stmt() ast.Stmt {
@@ -196,6 +211,8 @@ func (p *parser) Assign() ast.Expr {
 		switch lhs := lhs.(type) {
 		case ast.Var:
 			return ast.Assignment(lhs, rhs)
+		case *ast.Get:
+			return ast.SetAttr(lhs.Object, lhs.Attribute, rhs)
 		}
 		panic(p.Error("assignment must have variable on the LHS"))
 	}
@@ -277,12 +294,19 @@ func (p *parser) Unary() ast.Expr {
 
 func (p *parser) Call() ast.Expr {
 	c := p.Primary()
-	for p.Match(lex.TokPunc, "(") {
-		if p.Match(lex.TokPunc, ")") {
-			// Nothing to do
-			c = ast.CallExpr(c)
+	for {
+		if p.Match(lex.TokPunc, "(") {
+			if p.Match(lex.TokPunc, ")") {
+				// Nothing to do
+				c = ast.CallExpr(c)
+			} else {
+				c = ast.CallExpr(c, p.Arguments()...)
+			}
+		} else if p.Match(lex.TokPunc, ".") {
+			a := p.Consume("expect property name after '.'", lex.TokId)
+			c = ast.GetAttr(c, a.Lexeme)
 		} else {
-			c = ast.CallExpr(c, p.Arguments()...)
+			break
 		}
 	}
 	return c

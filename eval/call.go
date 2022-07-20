@@ -32,6 +32,13 @@ func (e *Env) call(target value.Callable, args ...value.Value) value.Value {
 		}
 		return value.Nil
 
+	case value.Class:
+		inst, err := value.Instantiate(target, args...)
+		if err != nil {
+			panic(err)
+		}
+		return inst
+
 	default:
 		panic(fmt.Errorf("don't know how to call %s", target))
 	}
