@@ -130,8 +130,12 @@ type FunDef struct {
 }
 
 func (f *FunDef) String() string {
+	return f._String("fun ")
+}
+
+func (f *FunDef) _String(prefix string) string {
 	buf := strings.Builder{}
-	buf.WriteString("fun ")
+	buf.WriteString(prefix)
 	buf.WriteString(f.Name.String())
 	buf.WriteString("(")
 	for i, p := range f.Params {

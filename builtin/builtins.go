@@ -17,10 +17,6 @@ func (b *Builtin) Arity() int {
 	return b.NArgs
 }
 
-func (b *Builtin) Call(env value.Env, ps ...value.Value) value.Value {
-	return b.Builtin(env, ps...)
-}
-
 func (b *Builtin) String() string {
 	return b.Name
 }

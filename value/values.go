@@ -59,7 +59,6 @@ type Env interface {
 type Callable interface {
 	Value
 	Arity() int
-	Call(e Env, ps ...Value) Value
 }
 
 type Closure struct {
@@ -74,28 +73,6 @@ func (c *Closure) String() string {
 
 func (c *Closure) Arity() int {
 	return len(c.Formals)
-}
-
-type WrappedReturn struct {
-	Value
-}
-
-func (WrappedReturn) Error() string {
-	return "return not from enclosing function"
-}
-
-func (c *Closure) Call(e Env, ps ...Value) Value {
-	e2 := c.ParentEnv.Child()
-	for i, f := range c.Formals {
-		e2.Bind(f.VarName(), ps[i])
-	}
-	err := e2.Run(c.Body)
-	if v, ok := err.(WrappedReturn); ok {
-		return v.Value
-	} else if err != nil {
-		panic(err)
-	}
-	return Nil
 }
 
 var _ Callable = &Closure{}

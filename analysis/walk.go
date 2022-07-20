@@ -94,6 +94,9 @@ func visitStmt(e *env, s ast.Stmt) error {
 		return visitStmt(e, s.Body)
 	case *ast.Return:
 		return visitExpr(e, s.Expr)
+	case ast.ClassDef:
+		e.bind(s.Name.VarName())
+		return nil
 
 	default:
 		return fmt.Errorf("don't know how to visit stmt %s", s)

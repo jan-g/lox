@@ -127,7 +127,7 @@ func (env *Env) Exec(s ast.Stmt) error {
 		if s.Expr != nil {
 			v = env.Eval(s.Expr)
 		}
-		panic(value.WrappedReturn{Value: v})
+		panic(WrappedReturn{Value: v})
 	}
 	return fmt.Errorf("unknown statement type %s", s)
 }
@@ -167,7 +167,7 @@ func (env *Env) Eval(e ast.Expr) value.Value {
 		for i, a := range e.Args {
 			ps[i] = env.Eval(a)
 		}
-		return target.Call(env, ps...)
+		return env.call(target, ps...)
 	}
 	panic(fmt.Errorf("unhandled expr %s", e))
 }
