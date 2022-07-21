@@ -12,7 +12,20 @@ print Breakfast;
 
 var b = Breakfast();
 
+fun f(x) {
+  print x;
+}
+
 b.a = 1;
 print b.a;
 
+b.f = f;
+
 print b;
+
+print b.f;
+b.f("function-valued field");
+
+print b.serve;
+
+b.serve("jan");

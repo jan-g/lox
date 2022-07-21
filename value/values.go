@@ -62,9 +62,10 @@ type Callable interface {
 }
 
 type Closure struct {
-	ParentEnv Env
-	Formals   []ast.Var
-	Body      ast.Stmt
+	ParentEnv     Env
+	Formals       []ast.Var
+	Body          ast.Stmt
+	IsInitialiser bool
 }
 
 func (c *Closure) String() string {
@@ -77,7 +78,7 @@ func (c *Closure) Arity() int {
 
 var _ Callable = &Closure{}
 
-func MakeClosure(parentEnv Env, formals []ast.Var, body ast.Stmt) Value {
+func MakeClosure(parentEnv Env, formals []ast.Var, body ast.Stmt) *Closure {
 	return &Closure{
 		ParentEnv: parentEnv,
 		Formals:   formals,

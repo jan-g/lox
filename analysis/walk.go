@@ -5,16 +5,37 @@ import (
 	"github.com/jan-g/lox/ast"
 )
 
+type classScope int
+type functionScope int
+
+const (
+	noClass classScope = iota
+	inClass
+
+	noFun functionScope = iota
+	inFun
+	inInit
+)
+
 type env struct {
+	classScope
+	functionScope
 	parent *env
 	vars   map[string]struct{}
 }
 
 func makeEnv(parent *env) *env {
-	return &env{
-		parent: parent,
-		vars:   make(map[string]struct{}),
+	e := &env{
+		classScope:    noClass,
+		functionScope: noFun,
+		parent:        parent,
+		vars:          make(map[string]struct{}),
 	}
+	if parent != nil {
+		e.classScope = parent.classScope
+		e.functionScope = parent.functionScope
+	}
+	return e
 }
 
 func (e *env) depth(v string) int {
@@ -75,6 +96,11 @@ func visitStmt(e *env, s ast.Stmt) error {
 	case *ast.FunDef:
 		e.bind(s.Name.VarName())
 		e2 := makeEnv(e)
+		if e.classScope == inClass && s.Name.VarName() == "init" {
+			e2.functionScope = inInit
+		} else {
+			e2.functionScope = inFun
+		}
 		for _, i := range s.Params {
 			e2.bind(i.VarName())
 		}
@@ -93,9 +119,32 @@ func visitStmt(e *env, s ast.Stmt) error {
 		}
 		return visitStmt(e, s.Body)
 	case *ast.Return:
-		return visitExpr(e, s.Expr)
+		switch e.functionScope {
+		case inFun:
+			if s.Expr == nil {
+				return nil
+			}
+			return visitExpr(e, s.Expr)
+		case noFun:
+			return fmt.Errorf("return not enclosed by function")
+		case inInit:
+			if s.Expr == nil {
+				return nil
+			}
+			return fmt.Errorf("nonempty return not permitted in initialiser")
+		default:
+			return fmt.Errorf("PANIC: unrecognised function scope %d", e.functionScope)
+		}
 	case ast.ClassDef:
 		e.bind(s.Name.VarName())
+		e2 := makeEnv(e)
+		e2.bind("this")
+		e2.classScope = inClass
+		for _, m := range s.Methods {
+			if err := visitStmt(e2, m); err != nil {
+				return err
+			}
+		}
 		return nil
 
 	default:
@@ -128,6 +177,14 @@ func visitExpr(e *env, x ast.Expr) error {
 	case ast.Var:
 		x.Depth = e.depth(x.VarName())
 		return nil
+	case ast.ThisT:
+		switch e.classScope {
+		case inClass:
+			x.Depth = e.depth(x.VarName())
+			return nil
+		default:
+			return fmt.Errorf("'this' keyword not in class scope")
+		}
 	case *ast.Assign:
 		if err := visitExpr(e, x.Rhs); err != nil {
 			return err

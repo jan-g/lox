@@ -199,3 +199,17 @@ func SetAttr(obj Expr, attr string, expr Expr) Expr {
 		Rhs:       expr,
 	}
 }
+
+type ThisT struct {
+	Var
+}
+
+func (t ThisT) String() string {
+	return t.Var.String()
+}
+
+func This(v string) Expr {
+	return ThisT{
+		Var: Id(v),
+	}
+}

@@ -158,7 +158,7 @@ const eof = -1
 
 func (l *Lexer) Next() rune {
 	if l.hitEof {
-		panic("Next() called on eof")
+		return eof
 	}
 	// Do we need to read more stuff in?
 	r, _, err := l.r.ReadRune()

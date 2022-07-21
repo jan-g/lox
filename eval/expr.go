@@ -153,6 +153,8 @@ func (env *Env) Eval(e ast.Expr) value.Value {
 		return value.Bool(e)
 	case ast.Var:
 		return env.Lookup(e.Depth, e.VarName())
+	case ast.ThisT:
+		return env.Lookup(e.Depth, e.VarName())
 	case *ast.Assign:
 		rhs := env.Eval(e.Rhs)
 		env.Assign(e.Lhs.Depth, e.Lhs.VarName(), rhs)
@@ -163,14 +165,11 @@ func (env *Env) Eval(e ast.Expr) value.Value {
 		if !ok {
 			panic(fmt.Errorf("target %s is not callable", t))
 		}
-		if target.Arity() != len(e.Args) {
-			panic(fmt.Errorf("%s required %d args, %d given", target, target.Arity(), len(e.Args)))
-		}
 		ps := make([]value.Value, len(e.Args))
 		for i, a := range e.Args {
 			ps[i] = env.Eval(a)
 		}
-		return env.call(target, ps...)
+		return env.call(target, false, ps...)
 
 	case *ast.Get:
 		t := env.Eval(e.Object)
@@ -178,10 +177,10 @@ func (env *Env) Eval(e ast.Expr) value.Value {
 		if !ok {
 			panic(fmt.Errorf("target %s has no attributes", t))
 		}
-		if v, ok := target.Fields[e.Attribute]; ok {
-			return v
+		if v, err := target.Get(e.Attribute); err != nil {
+			panic(err)
 		} else {
-			panic(fmt.Errorf("Undefined property '%s' on %s", e.Attribute, t))
+			return v
 		}
 
 	case *ast.Set:

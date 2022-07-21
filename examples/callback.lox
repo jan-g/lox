@@ -1,0 +1,24 @@
+var global = "global";
+
+class Thing {
+  getCallback() {
+    fun localFunction() {
+      print this;
+      global = "visited global";
+    }
+
+    return localFunction;
+  }
+  init() {
+    print "initialising";
+    print this;
+  }
+}
+
+var callback = Thing().getCallback();
+callback();
+print global;
+
+var t = Thing();
+print "recalling init()";
+print t.init();

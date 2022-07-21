@@ -347,6 +347,9 @@ func (p *parser) Primary() ast.Expr {
 	if p.Match(lex.TokKW, "false") {
 		return ast.False
 	}
+	if p.Match(lex.TokKW, "this") {
+		return ast.This(p.Previous().Lexeme)
+	}
 	if p.Match(lex.TokPunc, "(") {
 		e := p.Expr()
 		p.Consume("expect ')' after expression", lex.TokPunc, ")")
