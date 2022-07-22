@@ -77,6 +77,10 @@ func (p *parser) FunDef() ast.Stmt {
 
 func (p *parser) ClassDef() ast.Stmt {
 	name := p.Consume("expect class name", lex.TokId).Lexeme
+	var sc ast.Var
+	if p.Match(lex.TokOp, "<") {
+		sc = ast.Id(p.Consume("expect superclass name", lex.TokId).Lexeme)
+	}
 	p.Consume("class def required '{'", lex.TokPunc, "{")
 	var methods []*ast.FunDef
 	for !p.Check(lex.TokPunc, "}") && !p.Eof() {
@@ -84,7 +88,7 @@ func (p *parser) ClassDef() ast.Stmt {
 		methods = append(methods, m)
 	}
 	p.Consume("class def required '}'", lex.TokPunc, "}")
-	return ast.ClassStmt(ast.Id(name), methods...)
+	return ast.ClassStmt(ast.Id(name), sc, methods...)
 }
 
 func (p *parser) Stmt() ast.Stmt {
@@ -349,6 +353,10 @@ func (p *parser) Primary() ast.Expr {
 	}
 	if p.Match(lex.TokKW, "this") {
 		return ast.This(p.Previous().Lexeme)
+	}
+	if p.Match(lex.TokKW, "super") {
+		p.Consume("'.' required after super", lex.TokPunc, ".")
+		return ast.Supercall(p.Consume("attribute name required for supercall", lex.TokId).Lexeme)
 	}
 	if p.Match(lex.TokPunc, "(") {
 		e := p.Expr()

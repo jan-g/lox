@@ -30,7 +30,7 @@ func main() {
 
 func repl() {
 	r := bufio.NewReader(os.Stdin)
-	env := builtin.InitEnv(eval.New())
+	env := builtin.InitEnv(eval.New(os.Stdout))
 
 	for {
 		l, err := r.ReadBytes('\n')
@@ -49,7 +49,7 @@ func repl() {
 }
 
 func run(in ...string) {
-	env := builtin.InitEnv(eval.New())
+	env := builtin.InitEnv(eval.New(os.Stdout))
 	for _, fn := range in {
 		f, err := os.Open(fn)
 		if err != nil {

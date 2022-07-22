@@ -5,35 +5,21 @@ import (
 	"github.com/jan-g/lox/ast"
 )
 
-type classScope int
-type functionScope int
-
-const (
-	noClass classScope = iota
-	inClass
-
-	noFun functionScope = iota
-	inFun
-	inInit
-)
-
 type env struct {
-	classScope
-	functionScope
-	parent *env
-	vars   map[string]struct{}
+	function *ast.FunDef
+	class    ast.ClassDef
+	parent   *env
+	vars     map[string]struct{}
 }
 
 func makeEnv(parent *env) *env {
 	e := &env{
-		classScope:    noClass,
-		functionScope: noFun,
-		parent:        parent,
-		vars:          make(map[string]struct{}),
+		parent: parent,
+		vars:   make(map[string]struct{}),
 	}
 	if parent != nil {
-		e.classScope = parent.classScope
-		e.functionScope = parent.functionScope
+		e.class = parent.class
+		e.function = parent.function
 	}
 	return e
 }
@@ -96,11 +82,7 @@ func visitStmt(e *env, s ast.Stmt) error {
 	case *ast.FunDef:
 		e.bind(s.Name.VarName())
 		e2 := makeEnv(e)
-		if e.classScope == inClass && s.Name.VarName() == "init" {
-			e2.functionScope = inInit
-		} else {
-			e2.functionScope = inFun
-		}
+		e2.function = s
 		for _, i := range s.Params {
 			e2.bind(i.VarName())
 		}
@@ -119,29 +101,32 @@ func visitStmt(e *env, s ast.Stmt) error {
 		}
 		return visitStmt(e, s.Body)
 	case *ast.Return:
-		switch e.functionScope {
-		case inFun:
-			if s.Expr == nil {
-				return nil
-			}
-			return visitExpr(e, s.Expr)
-		case noFun:
+		if e.function == nil {
 			return fmt.Errorf("return not enclosed by function")
-		case inInit:
-			if s.Expr == nil {
-				return nil
-			}
-			return fmt.Errorf("nonempty return not permitted in initialiser")
-		default:
-			return fmt.Errorf("PANIC: unrecognised function scope %d", e.functionScope)
 		}
+		if s.Expr == nil {
+			return nil
+		}
+		if e.class != nil && e.function.Name.VarName() == "init" {
+			return fmt.Errorf("nonempty return not permitted in initialiser")
+		}
+		return visitExpr(e, s.Expr)
 	case ast.ClassDef:
+		if s.Superclass != nil {
+			if err := visitExpr(e, s.Superclass); err != nil {
+				return err
+			}
+		}
 		e.bind(s.Name.VarName())
-		e2 := makeEnv(e)
-		e2.bind("this")
-		e2.classScope = inClass
+		e2 := e
+		if s.Superclass != nil {
+			e2.bind("super")
+		}
+		e3 := makeEnv(e2)
+		e3.bind("this")
+		e3.class = s
 		for _, m := range s.Methods {
-			if err := visitStmt(e2, m); err != nil {
+			if err := visitStmt(e3, m); err != nil {
 				return err
 			}
 		}
@@ -178,13 +163,18 @@ func visitExpr(e *env, x ast.Expr) error {
 		x.Depth = e.depth(x.VarName())
 		return nil
 	case ast.ThisT:
-		switch e.classScope {
-		case inClass:
+		if e.class != nil {
 			x.Depth = e.depth(x.VarName())
 			return nil
-		default:
-			return fmt.Errorf("'this' keyword not in class scope")
 		}
+		return fmt.Errorf("'this' keyword not in class scope")
+	case *ast.Super:
+		if e.class != nil && e.class.Superclass != nil {
+			x.S.Depth = e.depth(x.S.VarName())
+			return nil
+		}
+		return fmt.Errorf("'super' keyword not in subclass scope")
+
 	case *ast.Assign:
 		if err := visitExpr(e, x.Rhs); err != nil {
 			return err

@@ -54,6 +54,7 @@ type Env interface {
 	Assign(depth int, name string, v Value)
 
 	Run(stmt ast.Stmt) error
+	Exec(ast.Stmt) error
 }
 
 type Callable interface {

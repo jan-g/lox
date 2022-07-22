@@ -1,0 +1,39 @@
+class Doughnut {
+  // General doughnut stuff...
+  foo() {
+    print "in foo";
+    this.bar();
+  }
+
+  bar() {
+    print "in Doughnut:bar";
+  }
+
+  cook() {
+    print "Fry until golden brown.";
+  }
+
+
+}
+class BostonCream < Doughnut {
+  bar() {
+    print "in BostonCream:bar";
+  }
+
+  cook() {
+    super.cook();
+    print "Pipe full of custard and coat with chocolate.";
+  }
+
+}
+
+Doughnut().foo();
+BostonCream().foo();
+Doughnut().cook();
+BostonCream().cook();
+
+// The following don't generate loops, they override bound names.
+class Loopy {}
+{
+class Loopy < Loopy {}
+}

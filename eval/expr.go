@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"github.com/jan-g/lox/ast"
 	"github.com/jan-g/lox/value"
+	"io"
 )
 
 type Env struct {
+	Out      io.Writer
 	Parent   *Env
 	Bindings map[string]value.Value
 }
@@ -14,7 +16,7 @@ type Env struct {
 var _ value.Env = &Env{}
 
 func (e *Env) Child() value.Env {
-	return New(e)
+	return New(e.Out, e)
 }
 
 func (env *Env) Bind(name string, v value.Value) {
@@ -49,7 +51,7 @@ func (env *Env) Assign(depth int, name string, v value.Value) {
 	panic(fmt.Errorf("cannot update unbound variable: %s", name))
 }
 
-func New(parent ...*Env) *Env {
+func New(out io.Writer, parent ...*Env) *Env {
 	if len(parent) > 1 {
 		panic("can only call New with 0 or 1 items")
 	}
@@ -58,6 +60,7 @@ func New(parent ...*Env) *Env {
 		p = parent[0]
 	}
 	return &Env{
+		Out:      out,
 		Parent:   p,
 		Bindings: make(map[string]value.Value),
 	}
@@ -85,7 +88,7 @@ func (env *Env) Exec(s ast.Stmt) error {
 		return nil
 	case *ast.Print:
 		e := env.Eval(s.Expr)
-		fmt.Println(e)
+		_, _ = fmt.Fprintln(env.Out, e)
 		return nil
 	case *ast.Expression:
 		_ = env.Eval(s.Expr)
@@ -98,10 +101,22 @@ func (env *Env) Exec(s ast.Stmt) error {
 		env.Bind(s.Name.VarName(), value.MakeClosure(env, s.Params, s.Body))
 		return nil
 	case ast.ClassDef:
-		env.Bind(s.Name.VarName(), value.MakeClass(env, s.Name.VarName(), s.Methods...))
+		var sc value.Class
+		var e2 value.Env = env
+		if s.Superclass != nil {
+			var ok bool
+			sup := env.Eval(s.Superclass)
+			sc, ok = sup.(value.Class)
+			if !ok {
+				return fmt.Errorf("%s is not a class", sup)
+			}
+			e2 = e2.Child()
+			e2.Bind("super", sc)
+		}
+		env.Bind(s.Name.VarName(), value.MakeClass(e2, s.Name.VarName(), sc, s.Methods...))
 		return nil
 	case ast.Block:
-		env2 := New(env)
+		env2 := env.Child()
 		for _, ss := range s {
 			if err := env2.Exec(ss); err != nil {
 				return err
@@ -193,6 +208,14 @@ func (env *Env) Eval(e ast.Expr) value.Value {
 		target.Fields[e.Attribute] = v
 		return v
 
+	case *ast.Super:
+		sc := env.Lookup(e.S.Depth, "super").(value.Class)
+		this := env.Lookup(e.S.Depth-1, "this").(value.Instance)
+		m, err := sc.FindMethod(e.Attribute)
+		if err != nil {
+			panic(err)
+		}
+		return value.Bind(this, m)
 	}
 	panic(fmt.Errorf("unhandled expr %s", e))
 }

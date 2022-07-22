@@ -7,9 +7,10 @@ import (
 
 type Class = *_Class
 type _Class struct {
-	Name    string
-	Methods map[string]*Closure
-	Env     Env
+	Name       string
+	Methods    map[string]*Closure
+	Env        Env
+	Superclass *_Class
 }
 
 func (c *_Class) String() string {
@@ -26,7 +27,7 @@ func (c *_Class) Arity() int {
 
 var _ Callable = &_Class{}
 
-func MakeClass(env Env, name string, defs ...*ast.FunDef) Class {
+func MakeClass(env Env, name string, sup Class, defs ...*ast.FunDef) Class {
 	methods := make(map[string]*Closure)
 	for _, d := range defs {
 		m := MakeClosure(env, d.Params, d.Body)
@@ -36,15 +37,20 @@ func MakeClass(env Env, name string, defs ...*ast.FunDef) Class {
 		methods[d.Name.VarName()] = m
 	}
 	return &_Class{
-		Name:    name,
-		Env:     env,
-		Methods: methods,
+		Name:       name,
+		Env:        env,
+		Methods:    methods,
+		Superclass: sup,
 	}
 }
 
 func (c *_Class) FindMethod(name string) (*Closure, error) {
-	if m, ok := c.Methods[name]; ok {
-		return m, nil
+	cl := c
+	for cl != nil {
+		if m, ok := cl.Methods[name]; ok {
+			return m, nil
+		}
+		cl = cl.Superclass
 	}
 	return nil, fmt.Errorf("cannot find method %s on %s", name, c)
 }

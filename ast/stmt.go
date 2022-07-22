@@ -175,8 +175,9 @@ func ReturnStmt(e Expr) Stmt {
 }
 
 type _ClassDef struct {
-	Name    Var
-	Methods []*FunDef
+	Name       Var
+	Methods    []*FunDef
+	Superclass Var
 }
 
 type ClassDef = *_ClassDef
@@ -185,6 +186,10 @@ func (c *_ClassDef) String() string {
 	buf := strings.Builder{}
 	buf.WriteString("class ")
 	buf.WriteString(c.Name.String())
+	if c.Superclass != nil {
+		buf.WriteString(" < ")
+		buf.WriteString(c.Superclass.String())
+	}
 	buf.WriteString(" {\n")
 	for i, p := range c.Methods {
 		if i > 0 {
@@ -196,9 +201,10 @@ func (c *_ClassDef) String() string {
 	return buf.String()
 }
 
-func ClassStmt(name Var, methods ...*FunDef) Stmt {
+func ClassStmt(name Var, superclass Var, methods ...*FunDef) Stmt {
 	return &_ClassDef{
-		Name:    name,
-		Methods: methods,
+		Name:       name,
+		Methods:    methods,
+		Superclass: superclass,
 	}
 }

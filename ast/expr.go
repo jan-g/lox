@@ -213,3 +213,19 @@ func This(v string) Expr {
 		Var: Id(v),
 	}
 }
+
+type Super struct {
+	S         Var
+	Attribute string
+}
+
+func (s *Super) String() string {
+	return fmt.Sprintf("super@%d.%s", s.S.Depth, s.Attribute)
+}
+
+func Supercall(attr string) *Super {
+	return &Super{
+		S:         Id("super"),
+		Attribute: attr,
+	}
+}
