@@ -129,6 +129,8 @@ func (env *Env) Exec(s ast.Stmt) error {
 			return env.Exec(s.Then)
 		} else if s.Else != nil {
 			return env.Exec(s.Else)
+		} else {
+			return nil
 		}
 	case *ast.While:
 		for {

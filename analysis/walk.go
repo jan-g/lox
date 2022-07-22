@@ -94,7 +94,10 @@ func visitStmt(e *env, s ast.Stmt) error {
 		if err := visitStmt(e, s.Then); err != nil {
 			return err
 		}
-		return visitStmt(e, s.Else)
+		if s.Else != nil {
+			return visitStmt(e, s.Else)
+		}
+		return nil
 	case *ast.While:
 		if err := visitExpr(e, s.Cond); err != nil {
 			return err
