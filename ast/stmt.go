@@ -123,40 +123,6 @@ func WhileStmt(cond Expr, body Stmt) Stmt {
 	}
 }
 
-type FunDef struct {
-	Name   Var
-	Params []Var
-	Body   Stmt
-}
-
-func (f *FunDef) String() string {
-	return f._String("fun ")
-}
-
-func (f *FunDef) _String(prefix string) string {
-	buf := strings.Builder{}
-	buf.WriteString(prefix)
-	buf.WriteString(f.Name.String())
-	buf.WriteString("(")
-	for i, p := range f.Params {
-		if i > 0 {
-			buf.WriteString(", ")
-		}
-		buf.WriteString(p.String())
-	}
-	buf.WriteString(") ")
-	buf.WriteString(f.Body.String())
-	return buf.String()
-}
-
-func FunStmt(name Var, params []Var, body Stmt) Stmt {
-	return &FunDef{
-		Name:   name,
-		Params: params,
-		Body:   body,
-	}
-}
-
 type Return struct {
 	Expr
 }

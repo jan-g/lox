@@ -1,0 +1,5 @@
+var dec = fun(x) { return x - 1; };
+
+print dec(6);
+
+print fun sum(n) { if (n == 0) return 0; else return n + sum(dec(n)); }(10);

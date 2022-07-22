@@ -366,5 +366,34 @@ func (p *parser) Primary() ast.Expr {
 	if p.Match(lex.TokId) {
 		return ast.Id(p.Previous().Lexeme)
 	}
+	if p.Match(lex.TokKW, "fun") {
+		return p.FunLit()
+	}
 	panic(p.Error("expected: Primary"))
+}
+
+func (p *parser) FunLit() *ast.FunLit {
+	// Either fun(args) { body }
+	// or fun name(args) { body }
+	// the second a way to construct recursive-capable function literals
+
+	var name ast.Var
+	if p.Match(lex.TokId) {
+		name = ast.Id(p.Previous().Lexeme)
+	}
+	p.Consume("function literal requires '('", lex.TokPunc, "(")
+	var params []ast.Var
+	if !p.Check(lex.TokPunc, ")") {
+		for {
+			formal := p.Consume("formal parameter must be an identifier", lex.TokId)
+			params = append(params, ast.Id(formal.Lexeme))
+			if !p.Match(lex.TokPunc, ",") {
+				break
+			}
+		}
+	}
+	p.Consume("formal parameters must end with ')'", lex.TokPunc, ")")
+	p.Consume("function literal body must be a block", lex.TokPunc, "{")
+	body := p.Block()
+	return ast.FunExpr(name, params, body)
 }

@@ -218,6 +218,16 @@ func (env *Env) Eval(e ast.Expr) value.Value {
 			panic(err)
 		}
 		return value.Bind(this, m)
+
+	case *ast.FunLit:
+		if e.Name == nil {
+			return value.MakeClosure(env, e.Params, e.Body)
+		}
+		e2 := env.Child()
+		cl := value.MakeClosure(e2, e.Params, e.Body)
+		e2.Bind(e.Name.VarName(), cl)
+		return cl
+
 	}
 	panic(fmt.Errorf("unhandled expr %s", e))
 }

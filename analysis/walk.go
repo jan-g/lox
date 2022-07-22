@@ -200,6 +200,18 @@ func visitExpr(e *env, x ast.Expr) error {
 			return err
 		}
 		return visitExpr(e, x.Rhs)
+	case *ast.FunLit:
+		e2 := e
+		if x.Name != nil {
+			e2 = makeEnv(e)
+			e2.bind(x.Name.VarName())
+		}
+		e3 := makeEnv(e2)
+		e3.function = (*ast.FunDef)(x)
+		for _, i := range x.Params {
+			e3.bind(i.VarName())
+		}
+		return visitStmt(e3, x.Body)
 
 	default:
 		return fmt.Errorf("don't know how to visit expr %s", x)

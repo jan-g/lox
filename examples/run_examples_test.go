@@ -52,18 +52,18 @@ func TestExamples(t *testing.T) {
 	}
 }
 
-func loadFile(t *testing.T, dir string, fn string, ext string) string {
+func loadFile(dir string, fn string, ext string) (string, error) {
 	fn2 := strings.TrimSuffix(fn, ".lox") + ext
 	f, err := os.Open(filepath.Join(dir, fn2))
 	if err != nil {
-		t.Fatal(err)
+		return "", err
 	}
 	defer f.Close()
 	expected, err := io.ReadAll(f)
 	if err != nil {
-		t.Fatal(err)
+		return "", err
 	}
-	return string(expected)
+	return string(expected), nil
 }
 
 func run1(t *testing.T, dir string, fn string) (err error) {
@@ -77,7 +77,10 @@ func run1(t *testing.T, dir string, fn string) (err error) {
 
 	defer func() {
 		if err != nil {
-			expected := loadFile(t, dir, fn, ".err")
+			expected, e2 := loadFile(dir, fn, ".err")
+			if e2 != nil {
+				return
+			}
 			expected = strings.Trim(expected, "\n")
 			if expected == err.Error() {
 				err = nil
@@ -100,7 +103,10 @@ func run1(t *testing.T, dir string, fn string) (err error) {
 		return err
 	}
 
-	expected := loadFile(t, dir, fn, ".out")
+	expected, e2 := loadFile(dir, fn, ".out")
+	if e2 != nil {
+		t.Fatal(e2)
+	}
 	if expected == buf.String() {
 		return nil
 	}
