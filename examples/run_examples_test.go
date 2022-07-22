@@ -2,12 +2,14 @@ package examples
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/jan-g/lox/analysis"
 	"github.com/jan-g/lox/builtin"
 	"github.com/jan-g/lox/eval"
 	"github.com/jan-g/lox/parse"
 	"github.com/stretchr/testify/assert"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -21,15 +23,28 @@ func curDir() string {
 }
 
 func loxFiles(dir string) []string {
-	m, _ := filepath.Glob(filepath.Join(dir, "*.lox"))
-	return m
+	var files []string
+	if err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		if d.IsDir() {
+			return nil
+		}
+		if filepath.Ext(d.Name()) != ".lox" {
+			return nil
+		}
+		fmt.Println(path, d)
+		files = append(files, path)
+		return nil
+	}); err != nil {
+		panic(err)
+	}
+	return files
 }
 
 func TestExamples(t *testing.T) {
-	dir := curDir()
-	for _, f := range loxFiles(dir) {
-		_, fn := filepath.Split(f)
-		t.Run(fn, func(t *testing.T) {
+	d := curDir()
+	for _, f := range loxFiles(d) {
+		dir, fn := filepath.Split(f)
+		t.Run(strings.TrimPrefix(f, d+"/"), func(t *testing.T) {
 			if err := run1(t, dir, fn); err != nil {
 				t.Fatal(err)
 			}
