@@ -1,0 +1,52 @@
+fun sum1(n) {
+  var s = 0;
+  for (var i = 1; i <= n; i = i + 1) s = s + i;
+  return s;
+}
+
+fun assert(name, f) {
+  if (f(0) != 0) return;
+  if (f(1) != 1) return;
+  if (f(2) != 3) return;
+  if (f(10) != 55) return;
+  print "passed: " + name;
+}
+
+fun sum2(n) {
+  if (n <= 0) return 0;
+  return n + sum2(n - 1);
+}
+
+/*
+(define Y
+  (lambda (le)
+    ((lambda (f) (f f))
+     (lambda (f)
+       (le (lambda (x) ((f f) x)))))))
+*/
+
+fun Y(le) {
+  fun twice(f) { return f(f); }
+  fun twice2(f) {
+    fun delay(x) {
+      return f(f)(x);
+    }
+    return le(delay);
+  }
+  return twice(twice2);
+}
+
+fun s(sum) {
+  fun b(n) {
+    if (n < 1) return 0;
+    return n + sum(n - 1);
+  }
+  return b;
+}
+
+var sum3 = Y(s);
+
+assert("sum1", sum1);
+assert("sum2", sum2);
+assert("sum3", sum3);
+
