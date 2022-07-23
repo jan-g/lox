@@ -1,0 +1,50 @@
+fun assert(name, f) {
+  if (f(0) != 0) return;
+  if (f(1) != 1) return;
+  if (f(10) != 55) return;
+  print "success: " + name;
+}
+
+var f = fun (n) {
+  if (n == 0) return 0;
+  return n + g(n - 1);
+};
+
+var g = fun (n) {
+  if (n == 0) return 0;
+  return n + g(n - 1);
+};
+
+assert("global", f);
+
+{
+  var i;
+  var h = fun (n) {
+    if (n == 0) return 0;
+    return n + i(n - 1);
+  };
+
+  i = fun (n) {
+    if (n == 0) return 0;
+    return n + h(n - 1);
+  };
+
+  assert("block", h);
+}
+
+fun j() {
+  var l;
+  var k = fun (n) {
+    if (n == 0) return 0;
+    return n + l(n - 1);
+  };
+
+  var l = fun (n) {
+    if (n == 0) return 0;
+    return n + k(n - 1);
+  };
+
+  assert("function", k);
+}
+
+j();

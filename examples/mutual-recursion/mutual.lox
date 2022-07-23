@@ -1,0 +1,48 @@
+fun assert(name, f) {
+  if (f(0) != 0) return;
+  if (f(1) != 1) return;
+  if (f(10) != 55) return;
+  print "success: " + name;
+}
+
+fun f(n) {
+  if (n == 0) return 0;
+  return n + g(n - 1);
+}
+
+fun g(n) {
+  if (n == 0) return 0;
+  return n + f(n - 1);
+}
+
+assert("global", f);
+
+{
+  fun h(n) {
+    if (n == 0) return 0;
+    return n + i(n - 1);
+  }
+
+  fun i(n) {
+    if (n == 0) return 0;
+    return n + h(n - 1);
+  }
+
+  assert("block", h);
+}
+
+fun j() {
+  fun k(n) {
+    if (n == 0) return 0;
+    return n + l(n - 1);
+  }
+
+  fun l(n) {
+    if (n == 0) return 0;
+    return n + k(n - 1);
+  }
+
+  assert("function", k);
+}
+
+j();

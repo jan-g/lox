@@ -62,6 +62,14 @@ func visitStmt(e *env, s ast.Stmt) error {
 		return nil
 	case ast.Block:
 		e2 := makeEnv(e)
+		// We take two passes. The first includes any function definitions at this level.
+		// That's to permit nested recursion in blocks.
+		for _, i := range s {
+			switch i := i.(type) {
+			case *ast.FunDef:
+				e2.bind(i.Name.VarName())
+			}
+		}
 		for _, i := range s {
 			if err := visitStmt(e2, i); err != nil {
 				return err
